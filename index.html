@@ -3,460 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniAI Ultra | The Professional Console</title>
+    <title>OmniAI | Native Direct</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root { --accent: #6366f1; --bg: #0f172a; --sidebar: #1e293b; }
-        body { background-color: var(--bg); font-family: 'Inter', sans-serif; overflow: hidden; color: #f8fafc; }
-        .sidebar { background-color: var(--sidebar); transition: all 0.3s ease; }
-        .glass-header { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #334155; }
-        .chat-bubble { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
-        .image-container img { border-radius: 12px; border: 2px solid #4f46e5; box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3); }
-        .mic-on { color: #ef4444; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
-    </style>
-</head>
-<body class="flex h-screen">
-
-    <aside class="w-72 sidebar hidden md:flex flex-col border-r border-slate-700">
-        <div class="p-8">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <i class="fas fa-brain text-white"></i>
-                </div>
-                <h1 class="text-2xl font-bold tracking-tight">OmniAI <span class="text-indigo-500">Pro</span></h1>
-            </div>
-        </div>
-
-        <nav class="flex-1 px-4 space-y-2">
-            <button onclick="newChat()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition font-semibold mb-8">
-                <i class="fas fa-plus"></i> New Conversation
-            </button>
-            
-            <p class="px-4 text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Workspace</p>
-            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white">
-                <i class="fas fa-message text-indigo-400"></i> Smart Chat
-            </button>
-            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white">
-                <i class="fas fa-wand-magic-sparkles text-indigo-400"></i> Image Studio
-            </button>
-        </nav>
-
-        <div class="p-6 border-t border-slate-800">
-            <button onclick="toggleModal('settingsModal')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition">
-                <i class="fas fa-key text-slate-400"></i> API Settings
-            </button>
-        </div>
-    </aside>
-
-    <main class="flex-1 flex flex-col relative bg-[#0b1120]">
-        <header class="p-4 glass-header flex justify-between items-center px-8 z-10">
-            <div class="flex items-center gap-6">
-                <select id="modelSelector" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm outline-none w-64 focus:ring-2 focus:ring-indigo-500">
-                    <option value="openai/gpt-4o">GPT-4o (Reasoning)</option>
-                    <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                    <option value="google/gemini-pro-1.5">Gemini 1.5 Pro</option>
-                    <option value="openai/dall-e-3">DALL-E 3 (Images)</option>
-                </select>
-                <div class="h-4 w-[1px] bg-slate-700"></div>
-                <span id="status" class="text-[10px] text-green-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full"></span> System Live
-                </span>
-            </div>
-        </header>
-
-        <div id="chatWindow" class="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 max-w-5xl mx-auto w-full">
-            <div class="flex justify-start">
-                <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-2xl max-w-[80%] chat-bubble">
-                    <p class="text-indigo-400 text-xs font-bold uppercase mb-2">OmniAI Assistant</p>
-                    <p class="text-slate-300">Welcome to your professional console. Switch models above, use the mic to speak, or ask me to generate artwork.</p>
-                </div>
-            </div>
-        </div>
-
-        <footer class="p-6 md:p-10 bg-gradient-to-t from-[#0b1120] via-[#0b1120] to-transparent">
-            <div class="max-w-4xl mx-auto relative">
-                <div class="flex items-center gap-4 bg-slate-800/80 p-3 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-md">
-                    <button id="micBtn" onclick="startVoice()" class="p-4 text-slate-400 hover:text-white transition">
-                        <i class="fas fa-microphone text-xl"></i>
-                    </button>
-                    <input type="text" id="userInput" placeholder="Message OmniAI or type image prompts..." 
-                           class="flex-1 bg-transparent border-none outline-none py-3 text-white placeholder-slate-500">
-                    <button onclick="handleSend()" class="bg-indigo-600 w-14 h-14 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/40">
-                        <i class="fas fa-arrow-up text-white text-lg"></i>
-                    </button>
-                </div>
-            </div>
-        </footer>
-    </main>
-
-    <div id="settingsModal" class="modal">
-        <div class="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
-            <div class="flex items-center gap-4 mb-6">
-                <i class="fas fa-shield-halved text-3xl text-indigo-500"></i>
-                <h2 class="text-2xl font-bold">Security Center</h2>
-            </div>
-            <p class="text-slate-400 text-sm mb-6 leading-relaxed">Your OpenRouter key is encrypted in your local storage. We never see your data.</p>
-            <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." 
-                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 mb-8 outline-none focus:ring-2 focus:ring-indigo-500 text-white">
-            <div class="flex justify-end gap-4">
-                <button onclick="toggleModal('settingsModal')" class="px-6 py-2 text-slate-400 font-medium">Dismiss</button>
-                <button onclick="saveKey()" class="bg-indigo-600 px-8 py-3 rounded-xl font-bold text-white hover:bg-indigo-500 transition">Save Profile</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const chatWindow = document.getElementById('chatWindow');
-        const userInput = document.getElementById('userInput');
-        const modelSelector = document.getElementById('modelSelector');
-        const micBtn = document.getElementById('micBtn');
-
-        // Initial Load
-        window.onload = () => {
-            const key = localStorage.getItem('openrouter_key');
-            if(key) document.getElementById('apiKeyInput').value = key;
-            loadHistory();
-        };
-
-        function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
-        
-        function saveKey() {
-            const val = document.getElementById('apiKeyInput').value.trim();
-            if(val) {
-                localStorage.setItem('openrouter_key', val);
-                toggleModal('settingsModal');
-                alert("Identity Verified: API Key Saved.");
-            }
-        }
-
-        function newChat() {
-            localStorage.removeItem('chat_history');
-            location.reload();
-        }
-
-        // Voice Engine
-        function startVoice() {
-            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Recognition) return alert("Browser does not support Voice.");
-            
-            const rec = new Recognition();
-            rec.onstart = () => micBtn.classList.add('mic-on');
-            rec.onend = () => micBtn.classList.remove('mic-on');
-            rec.onresult = (e) => { userInput.value = e.results[0][0].transcript; };
-            rec.start();
-        }
-
-        // Messaging Core
-        async function handleSend() {
-            const prompt = userInput.value.trim();
-            const key = localStorage.getItem('openrouter_key');
-            
-            if(!key) return toggleModal('settingsModal');
-            if(!prompt) return;
-
-            // UI Update
-            appendMessage(prompt, 'user');
-            userInput.value = '';
-            const loadingMsg = appendMessage("Synchronizing with " + modelSelector.value + "...", 'ai', true);
-
-            const history = JSON.parse(localStorage.getItem('chat_history') || '[]');
-            history.push({role: 'user', content: prompt});
-
-            try {
-                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${key}`,
-                        "Content-Type": "application/json",
-                        "X-Title": "OmniAI Console"
-                    },
-                    body: JSON.stringify({
-                        "model": modelSelector.value,
-                        "messages": history
-                    })
-                });
-
-                const data = await response.json();
-                loadingMsg.remove();
-
-                const reply = data.choices[0].message.content;
-                appendMessage(reply, 'ai', false, modelSelector.value.split('/')[1]);
-                
-                history.push({role: 'assistant', content: reply});
-                localStorage.setItem('chat_history', JSON.stringify(history));
-
-            } catch (err) {
-                loadingMsg.innerHTML = `<span class="text-red-400">Connection Failed: Verify API Key and Model status.</span>`;
-            }
-        }
-
-        function appendMessage(text, sender, isLoading = false, modelLabel = null) {
-            const div = document.createElement('div');
-            div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} w-full chat-bubble`;
-            
-            // Check if text is an Image URL
-            const isImage = text.includes('http') && (text.includes('openrouter.ai') || text.includes('dalle'));
-            const content = isImage 
-                ? `<div class="image-container mt-2"><img src="${text}" class="max-w-full h-auto" alt="Generated"></div>` 
-                : `<div class="prose prose-invert prose-sm text-slate-300">${marked.parse(text)}</div>`;
-
-            div.innerHTML = `
-                <div class="${sender === 'user' ? 'bg-indigo-600' : 'bg-slate-800'} p-6 rounded-2xl shadow-2xl max-w-[85%] border border-slate-700/50">
-                    ${modelLabel ? `<p class="text-indigo-400 text-[10px] font-bold uppercase mb-2 tracking-widest">${modelLabel}</p>` : ''}
-                    ${isLoading ? `<div class="flex gap-2"><div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-100"></div></div>` : content}
-                </div>
-            `;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            return div;
-        }
-
-        function loadHistory() {
-            const history = JSON.parse(localStorage.getItem('chat_history') || '[]');
-            history.forEach(m => appendMessage(m.content, m.role === 'user' ? 'user' : 'ai'));
-        }
-
-        userInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
+    
+    <script type="importmap">
+        { "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }
     </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniAI Ultra | The Professional Console</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        :root { --accent: #6366f1; --bg: #0f172a; --sidebar: #1e293b; }
-        body { background-color: var(--bg); font-family: 'Inter', sans-serif; overflow: hidden; color: #f8fafc; }
-        .sidebar { background-color: var(--sidebar); transition: all 0.3s ease; }
-        .glass-header { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #334155; }
-        .chat-bubble { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
-        .image-container img { border-radius: 12px; border: 2px solid #4f46e5; box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3); }
-        .mic-on { color: #ef4444; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        body { background: #0f172a; color: #f1f5f9; overflow: hidden; }
+        .sidebar { background: #1e293b; border-right: 1px solid #334155; width: 280px; }
+        .view { display: none; height: 100%; flex-direction: column; }
+        .view.active { display: flex; }
+        .active-tab { background: #4f46e5; color: white; border-radius: 12px; }
     </style>
 </head>
 <body class="flex h-screen">
 
-    <aside class="w-72 sidebar hidden md:flex flex-col border-r border-slate-700">
-        <div class="p-8">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                    <i class="fas fa-brain text-white"></i>
-                </div>
-                <h1 class="text-2xl font-bold tracking-tight">OmniAI <span class="text-indigo-500">Pro</span></h1>
-            </div>
+    <aside class="sidebar flex flex-col p-6">
+        <div class="text-2xl font-black mb-10 text-indigo-400 flex items-center gap-2">
+            <i class="fas fa-microchip"></i> OmniAI
         </div>
-
-        <nav class="flex-1 px-4 space-y-2">
-            <button onclick="newChat()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition font-semibold mb-8">
-                <i class="fas fa-plus"></i> New Conversation
+        
+        <nav class="flex-1 space-y-2">
+            <button onclick="switchView('chat')" id="tab-chat" class="w-full text-left p-3 flex items-center gap-3 active-tab transition">
+                <i class="fas fa-comment-dots"></i> Smart Chat
             </button>
-            
-            <p class="px-4 text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-2">Workspace</p>
-            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white">
-                <i class="fas fa-message text-indigo-400"></i> Smart Chat
-            </button>
-            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white">
-                <i class="fas fa-wand-magic-sparkles text-indigo-400"></i> Image Studio
+            <button onclick="switchView('settings')" id="tab-settings" class="w-full text-left p-3 flex items-center gap-3 hover:bg-slate-700 rounded-xl transition">
+                <i class="fas fa-cog"></i> API Config
             </button>
         </nav>
 
-        <div class="p-6 border-t border-slate-800">
-            <button onclick="toggleModal('settingsModal')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition">
-                <i class="fas fa-key text-slate-400"></i> API Settings
-            </button>
+        <div class="mt-auto p-4 bg-slate-800/50 rounded-2xl border border-slate-700 text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
+            Local Storage Mode
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col relative bg-[#0b1120]">
-        <header class="p-4 glass-header flex justify-between items-center px-8 z-10">
-            <div class="flex items-center gap-6">
-                <select id="modelSelector" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm outline-none w-64 focus:ring-2 focus:ring-indigo-500">
-                    <option value="openai/gpt-4o">GPT-4o (Reasoning)</option>
-                    <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                    <option value="google/gemini-pro-1.5">Gemini 1.5 Pro</option>
-                    <option value="openai/dall-e-3">DALL-E 3 (Images)</option>
-                </select>
-                <div class="h-4 w-[1px] bg-slate-700"></div>
-                <span id="status" class="text-[10px] text-green-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full"></span> System Live
-                </span>
-            </div>
-        </header>
-
-        <div id="chatWindow" class="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 max-w-5xl mx-auto w-full">
-            <div class="flex justify-start">
-                <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-2xl max-w-[80%] chat-bubble">
-                    <p class="text-indigo-400 text-xs font-bold uppercase mb-2">OmniAI Assistant</p>
-                    <p class="text-slate-300">Welcome to your professional console. Switch models above, use the mic to speak, or ask me to generate artwork.</p>
+    <main class="flex-1 flex flex-col">
+        <section id="chat-view" class="view active">
+            <header class="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between px-8">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Active Engine:</span>
+                    <select id="modelSelect" class="bg-slate-800 border-none rounded-lg px-3 py-1 text-xs text-indigo-300 outline-none">
+                        <option value="gemini">Google Gemini 1.5</option>
+                        <option value="chatgpt">ChatGPT (GPT-4o)</option>
+                    </select>
                 </div>
-            </div>
-        </div>
+                <button onclick="clearChat()" class="text-[10px] text-slate-500 hover:text-red-400">Clear History</button>
+            </header>
 
-        <footer class="p-6 md:p-10 bg-gradient-to-t from-[#0b1120] via-[#0b1120] to-transparent">
-            <div class="max-w-4xl mx-auto relative">
-                <div class="flex items-center gap-4 bg-slate-800/80 p-3 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-md">
-                    <button id="micBtn" onclick="startVoice()" class="p-4 text-slate-400 hover:text-white transition">
-                        <i class="fas fa-microphone text-xl"></i>
-                    </button>
-                    <input type="text" id="userInput" placeholder="Message OmniAI or type image prompts..." 
-                           class="flex-1 bg-transparent border-none outline-none py-3 text-white placeholder-slate-500">
-                    <button onclick="handleSend()" class="bg-indigo-600 w-14 h-14 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/40">
-                        <i class="fas fa-arrow-up text-white text-lg"></i>
+            <div id="chatBox" class="flex-1 overflow-y-auto p-8 space-y-6"></div>
+
+            <div class="p-6">
+                <div class="max-w-4xl mx-auto flex gap-3 bg-slate-800 p-2 rounded-2xl border border-slate-700 shadow-xl">
+                    <input type="text" id="userInput" placeholder="Ask anything..." class="flex-1 bg-transparent px-4 outline-none">
+                    <button onclick="handleSend()" class="bg-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20">
+                        <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
             </div>
-        </footer>
+        </section>
+
+        <section id="settings-view" class="view p-12 items-center justify-center">
+            <div class="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6">API Configuration</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Google Gemini Key</label>
+                        <input type="password" id="geminiKey" placeholder="Enter Gemini Key" class="w-full bg-slate-800 p-3 rounded-xl mt-1 border border-slate-700 outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">OpenAI Key (ChatGPT)</label>
+                        <input type="password" id="openaiKey" placeholder="Enter ChatGPT Key" class="w-full bg-slate-800 p-3 rounded-xl mt-1 border border-slate-700 outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <button onclick="saveSettings()" class="w-full bg-indigo-600 p-4 rounded-xl mt-8 font-bold hover:bg-indigo-500 transition">Save Keys</button>
+            </div>
+        </section>
     </main>
 
-    <div id="settingsModal" class="modal">
-        <div class="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
-            <div class="flex items-center gap-4 mb-6">
-                <i class="fas fa-shield-halved text-3xl text-indigo-500"></i>
-                <h2 class="text-2xl font-bold">Security Center</h2>
-            </div>
-            <p class="text-slate-400 text-sm mb-6 leading-relaxed">Your OpenRouter key is encrypted in your local storage. We never see your data.</p>
-            <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." 
-                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 mb-8 outline-none focus:ring-2 focus:ring-indigo-500 text-white">
-            <div class="flex justify-end gap-4">
-                <button onclick="toggleModal('settingsModal')" class="px-6 py-2 text-slate-400 font-medium">Dismiss</button>
-                <button onclick="saveKey()" class="bg-indigo-600 px-8 py-3 rounded-xl font-bold text-white hover:bg-indigo-500 transition">Save Profile</button>
-            </div>
-        </div>
-    </div>
+    <script type="module">
+        import { GoogleGenAI } from "@google/generative-ai";
 
-    <script>
-        const chatWindow = document.getElementById('chatWindow');
-        const userInput = document.getElementById('userInput');
-        const modelSelector = document.getElementById('modelSelector');
-        const micBtn = document.getElementById('micBtn');
-
-        // Initial Load
-        window.onload = () => {
-            const key = localStorage.getItem('openrouter_key');
-            if(key) document.getElementById('apiKeyInput').value = key;
-            loadHistory();
-        };
-
-        function toggleModal(id) { document.getElementById(id).classList.toggle('active'); }
-        
-        function saveKey() {
-            const val = document.getElementById('apiKeyInput').value.trim();
-            if(val) {
-                localStorage.setItem('openrouter_key', val);
-                toggleModal('settingsModal');
-                alert("Identity Verified: API Key Saved.");
-            }
+        // Navigation
+        window.switchView = (v) => {
+            document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(e => e.classList.remove('active-tab'));
+            document.getElementById(`${v}-view`).classList.add('active');
+            document.getElementById(`tab-${v}`).classList.add('active-tab');
         }
 
-        function newChat() {
-            localStorage.removeItem('chat_history');
-            location.reload();
+        // Settings
+        window.saveSettings = () => {
+            localStorage.setItem('gemini_key', document.getElementById('geminiKey').value);
+            localStorage.setItem('openai_key', document.getElementById('openaiKey').value);
+            alert("API Keys updated!");
+            switchView('chat');
         }
 
-        // Voice Engine
-        function startVoice() {
-            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Recognition) return alert("Browser does not support Voice.");
-            
-            const rec = new Recognition();
-            rec.onstart = () => micBtn.classList.add('mic-on');
-            rec.onend = () => micBtn.classList.remove('mic-on');
-            rec.onresult = (e) => { userInput.value = e.results[0][0].transcript; };
-            rec.start();
-        }
+        // Initialize Keys
+        document.getElementById('geminiKey').value = localStorage.getItem('gemini_key') || '';
+        document.getElementById('openaiKey').value = localStorage.getItem('openai_key') || '';
 
-        // Messaging Core
-        async function handleSend() {
-            const prompt = userInput.value.trim();
-            const key = localStorage.getItem('openrouter_key');
-            
-            if(!key) return toggleModal('settingsModal');
+        // Chat Logic
+        window.handleSend = async () => {
+            const prompt = document.getElementById('userInput').value;
+            const engine = document.getElementById('modelSelect').value;
             if(!prompt) return;
 
-            // UI Update
-            appendMessage(prompt, 'user');
-            userInput.value = '';
-            const loadingMsg = appendMessage("Synchronizing with " + modelSelector.value + "...", 'ai', true);
-
-            const history = JSON.parse(localStorage.getItem('chat_history') || '[]');
-            history.push({role: 'user', content: prompt});
+            appendMsg(prompt, 'user');
+            document.getElementById('userInput').value = '';
+            const loading = appendMsg("...", 'ai');
 
             try {
-                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${key}`,
-                        "Content-Type": "application/json",
-                        "X-Title": "OmniAI Console"
-                    },
-                    body: JSON.stringify({
-                        "model": modelSelector.value,
-                        "messages": history
-                    })
-                });
-
-                const data = await response.json();
-                loadingMsg.remove();
-
-                const reply = data.choices[0].message.content;
-                appendMessage(reply, 'ai', false, modelSelector.value.split('/')[1]);
-                
-                history.push({role: 'assistant', content: reply});
-                localStorage.setItem('chat_history', JSON.stringify(history));
-
-            } catch (err) {
-                loadingMsg.innerHTML = `<span class="text-red-400">Connection Failed: Verify API Key and Model status.</span>`;
+                let reply = "";
+                if (engine === 'gemini') {
+                    const key = localStorage.getItem('gemini_key');
+                    const genAI = new GoogleGenAI(key);
+                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    const result = await model.generateContent(prompt);
+                    reply = result.response.text();
+                } else {
+                    const key = localStorage.getItem('openai_key');
+                    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ model: "gpt-4o", messages: [{role:"user", content: prompt}] })
+                    });
+                    const data = await res.json();
+                    reply = data.choices[0].message.content;
+                }
+                loading.remove();
+                appendMsg(reply, 'ai');
+            } catch (e) {
+                loading.innerHTML = `<span class="text-red-400 text-xs">Error: Check API Key/Network.</span>`;
             }
         }
 
-        function appendMessage(text, sender, isLoading = false, modelLabel = null) {
+        function appendMsg(text, role) {
             const div = document.createElement('div');
-            div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} w-full chat-bubble`;
-            
-            // Check if text is an Image URL
-            const isImage = text.includes('http') && (text.includes('openrouter.ai') || text.includes('dalle'));
-            const content = isImage 
-                ? `<div class="image-container mt-2"><img src="${text}" class="max-w-full h-auto" alt="Generated"></div>` 
-                : `<div class="prose prose-invert prose-sm text-slate-300">${marked.parse(text)}</div>`;
-
-            div.innerHTML = `
-                <div class="${sender === 'user' ? 'bg-indigo-600' : 'bg-slate-800'} p-6 rounded-2xl shadow-2xl max-w-[85%] border border-slate-700/50">
-                    ${modelLabel ? `<p class="text-indigo-400 text-[10px] font-bold uppercase mb-2 tracking-widest">${modelLabel}</p>` : ''}
-                    ${isLoading ? `<div class="flex gap-2"><div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div><div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-100"></div></div>` : content}
-                </div>
-            `;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `<div class="${role === 'user' ? 'bg-indigo-600' : 'bg-slate-800'} p-4 rounded-2xl max-w-[85%] text-sm shadow-md">${marked.parse(text)}</div>`;
+            document.getElementById('chatBox').appendChild(div);
+            document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
             return div;
         }
 
-        function loadHistory() {
-            const history = JSON.parse(localStorage.getItem('chat_history') || '[]');
-            history.forEach(m => appendMessage(m.content, m.role === 'user' ? 'user' : 'ai'));
-        }
-
-        userInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
+        window.clearChat = () => document.getElementById('chatBox').innerHTML = '';
     </script>
 </body>
 </html>
