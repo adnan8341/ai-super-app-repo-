@@ -3,157 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniAI | Native Direct</title>
+    <title>OmniAI | Dual Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script type="importmap">
         { "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }
     </script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0f172a; color: #f1f5f9; overflow: hidden; }
-        .sidebar { background: #1e293b; border-right: 1px solid #334155; width: 280px; }
+        body { background: #0b1120; color: #f8fafc; overflow: hidden; }
+        .sidebar { background: #111827; border-right: 1px solid #1e293b; width: 280px; height: 100vh; }
         .view { display: none; height: 100%; flex-direction: column; }
         .view.active { display: flex; }
-        .active-tab { background: #4f46e5; color: white; border-radius: 12px; }
+        .btn-active { background: #312e81; border-left: 4px solid #6366f1; }
     </style>
 </head>
 <body class="flex h-screen">
 
-    <aside class="sidebar flex flex-col p-6">
-        <div class="text-2xl font-black mb-10 text-indigo-400 flex items-center gap-2">
-            <i class="fas fa-microchip"></i> OmniAI
-        </div>
-        
-        <nav class="flex-1 space-y-2">
-            <button onclick="switchView('chat')" id="tab-chat" class="w-full text-left p-3 flex items-center gap-3 active-tab transition">
-                <i class="fas fa-comment-dots"></i> Smart Chat
-            </button>
-            <button onclick="switchView('settings')" id="tab-settings" class="w-full text-left p-3 flex items-center gap-3 hover:bg-slate-700 rounded-xl transition">
-                <i class="fas fa-cog"></i> API Config
-            </button>
+    <aside class="sidebar flex flex-col">
+        <div class="p-6 text-xl font-bold border-b border-slate-800">OmniAI <span class="text-indigo-400 text-xs">v2.0</span></div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="showView('chat')" id="tab-chat" class="w-full flex p-3 rounded-xl hover:bg-slate-800 btn-active"><i class="fas fa-comment mr-3"></i> Chat Console</button>
+            <button onclick="showView('studio')" id="tab-studio" class="w-full flex p-3 rounded-xl hover:bg-slate-800"><i class="fas fa-wand-magic-sparkles mr-3"></i> Image Studio</button>
+            <div class="pt-6 text-[10px] font-bold text-slate-500 uppercase px-3">History</div>
+            <div id="imageHistory" class="space-y-2 px-1"></div>
         </nav>
-
-        <div class="mt-auto p-4 bg-slate-800/50 rounded-2xl border border-slate-700 text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
-            Local Storage Mode
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="openSettings()" class="w-full bg-slate-800 p-3 rounded-lg text-sm hover:bg-slate-700">API Keys</button>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col">
+    <main class="flex-1 relative">
         <section id="chat-view" class="view active">
-            <header class="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between px-8">
-                <div class="flex items-center gap-4">
-                    <span class="text-xs font-bold text-slate-500 uppercase">Active Engine:</span>
-                    <select id="modelSelect" class="bg-slate-800 border-none rounded-lg px-3 py-1 text-xs text-indigo-300 outline-none">
-                        <option value="gemini">Google Gemini 1.5</option>
-                        <option value="chatgpt">ChatGPT (GPT-4o)</option>
-                    </select>
-                </div>
-                <button onclick="clearChat()" class="text-[10px] text-slate-500 hover:text-red-400">Clear History</button>
+            <header class="p-4 bg-slate-900/50 flex justify-between px-8 border-b border-slate-800">
+                <select id="modelSelect" class="bg-slate-800 border-none rounded-lg px-4 py-2 text-sm text-indigo-300">
+                    <optgroup label="Direct Google Engine">
+                        <option value="google/gemini-1.5-flash">Gemini 1.5 Flash (Native)</option>
+                    </optgroup>
+                    <optgroup label="OpenRouter Engine">
+                        <option value="openrouter/free">OpenRouter (Free Router)</option>
+                        <option value="deepseek/deepseek-chat">DeepSeek V3</option>
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                    </optgroup>
+                </select>
+                <button onclick="clearChat()" class="text-xs opacity-50 hover:opacity-100">Reset Chat</button>
             </header>
-
-            <div id="chatBox" class="flex-1 overflow-y-auto p-8 space-y-6"></div>
-
-            <div class="p-6">
-                <div class="max-w-4xl mx-auto flex gap-3 bg-slate-800 p-2 rounded-2xl border border-slate-700 shadow-xl">
-                    <input type="text" id="userInput" placeholder="Ask anything..." class="flex-1 bg-transparent px-4 outline-none">
-                    <button onclick="handleSend()" class="bg-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
+            <div id="chatBox" class="flex-1 overflow-y-auto p-8 space-y-4"></div>
+            <div class="p-6 bg-slate-900/30 flex gap-3">
+                <input type="text" id="chatInput" placeholder="Ask anything..." class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <button onclick="sendMessage()" class="bg-indigo-600 px-8 rounded-xl"><i class="fas fa-paper-plane"></i></button>
             </div>
         </section>
 
-        <section id="settings-view" class="view p-12 items-center justify-center">
-            <div class="bg-slate-900 p-10 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
-                <h2 class="text-2xl font-bold mb-6">API Configuration</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase">Google Gemini Key</label>
-                        <input type="password" id="geminiKey" placeholder="Enter Gemini Key" class="w-full bg-slate-800 p-3 rounded-xl mt-1 border border-slate-700 outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase">OpenAI Key (ChatGPT)</label>
-                        <input type="password" id="openaiKey" placeholder="Enter ChatGPT Key" class="w-full bg-slate-800 p-3 rounded-xl mt-1 border border-slate-700 outline-none focus:border-indigo-500">
-                    </div>
-                </div>
-
-                <button onclick="saveSettings()" class="w-full bg-indigo-600 p-4 rounded-xl mt-8 font-bold hover:bg-indigo-500 transition">Save Keys</button>
+        <section id="studio-view" class="view items-center justify-center p-12">
+            <div id="output" class="w-full max-w-lg aspect-square bg-slate-900 border-2 border-dashed border-slate-800 rounded-3xl mb-8 flex items-center justify-center overflow-hidden">
+                <p class="text-slate-600 italic">Generate images via Gemini Native</p>
+            </div>
+            <div class="w-full max-w-xl flex gap-3">
+                <input type="text" id="imageInput" placeholder="Describe the image..." class="flex-1 bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <button onclick="generateImage()" class="bg-indigo-600 px-8 rounded-xl font-bold">Create</button>
             </div>
         </section>
     </main>
 
+    <div id="settings" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-md">
+            <h2 class="text-xl font-bold mb-6">API Configuration</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">Google Gemini API Key</label>
+                    <input type="password" id="key-google" class="w-full bg-slate-800 p-3 rounded-lg mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase">OpenRouter API Key</label>
+                    <input type="password" id="key-or" class="w-full bg-slate-800 p-3 rounded-lg mt-1">
+                </div>
+            </div>
+            <button onclick="saveKeys()" class="w-full bg-indigo-600 p-4 rounded-xl mt-8 font-bold">Save Keys</button>
+        </div>
+    </div>
+
     <script type="module">
         import { GoogleGenAI } from "@google/generative-ai";
 
-        // Navigation
-        window.switchView = (v) => {
+        window.showView = (v) => {
             document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(e => e.classList.remove('active-tab'));
+            document.querySelectorAll('nav button').forEach(e => e.classList.remove('btn-active'));
             document.getElementById(`${v}-view`).classList.add('active');
-            document.getElementById(`tab-${v}`).classList.add('active-tab');
-        }
+            document.getElementById(`tab-${v}`).classList.add('btn-active');
+        };
 
-        // Settings
-        window.saveSettings = () => {
-            localStorage.setItem('gemini_key', document.getElementById('geminiKey').value);
-            localStorage.setItem('openai_key', document.getElementById('openaiKey').value);
-            alert("API Keys updated!");
-            switchView('chat');
-        }
+        window.openSettings = () => document.getElementById('settings').style.display = 'flex';
+        window.saveKeys = () => {
+            localStorage.setItem('key_google', document.getElementById('key-google').value);
+            localStorage.setItem('key_or', document.getElementById('key-or').value);
+            document.getElementById('settings').style.display = 'none';
+        };
 
-        // Initialize Keys
-        document.getElementById('geminiKey').value = localStorage.getItem('gemini_key') || '';
-        document.getElementById('openaiKey').value = localStorage.getItem('openai_key') || '';
+        // LOAD KEYS ON START
+        document.getElementById('key-google').value = localStorage.getItem('key_google') || '';
+        document.getElementById('key-or').value = localStorage.getItem('key_or') || '';
 
-        // Chat Logic
-        window.handleSend = async () => {
-            const prompt = document.getElementById('userInput').value;
-            const engine = document.getElementById('modelSelect').value;
-            if(!prompt) return;
-
-            appendMsg(prompt, 'user');
-            document.getElementById('userInput').value = '';
-            const loading = appendMsg("...", 'ai');
+        // ROUTER CHAT HANDLER
+        window.sendMessage = async () => {
+            const model = document.getElementById('modelSelect').value;
+            const text = document.getElementById('chatInput').value;
+            if(!text) return;
+            
+            appendMsg(text, 'user');
+            document.getElementById('chatInput').value = '';
+            const load = appendMsg("...", 'ai');
 
             try {
                 let reply = "";
-                if (engine === 'gemini') {
-                    const key = localStorage.getItem('gemini_key');
-                    const genAI = new GoogleGenAI(key);
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                    const result = await model.generateContent(prompt);
-                    reply = result.response.text();
+                if(model.startsWith('google/')) {
+                    const genAI = new GoogleGenAI(localStorage.getItem('key_google'));
+                    const aiModel = genAI.getGenerativeModel({ model: model.replace('google/', '') });
+                    const res = await aiModel.generateContent(text);
+                    reply = res.response.text();
                 } else {
-                    const key = localStorage.getItem('openai_key');
-                    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                         method: "POST",
-                        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-                        body: JSON.stringify({ model: "gpt-4o", messages: [{role:"user", content: prompt}] })
+                        headers: { "Authorization": `Bearer ${localStorage.getItem('key_or')}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ model: model, messages: [{role:"user", content:text}] })
                     });
                     const data = await res.json();
                     reply = data.choices[0].message.content;
                 }
-                loading.remove();
+                load.remove();
                 appendMsg(reply, 'ai');
-            } catch (e) {
-                loading.innerHTML = `<span class="text-red-400 text-xs">Error: Check API Key/Network.</span>`;
-            }
+            } catch (e) { load.innerHTML = "Error: Check your keys."; }
+        };
+
+        // NATIVE GEMINI IMAGE HANDLER
+        window.generateImage = async () => {
+            const prompt = document.getElementById('imageInput').value;
+            const output = document.getElementById('output');
+            const key = localStorage.getItem('key_google');
+            
+            output.innerHTML = `<i class="fas fa-circle-notch animate-spin text-3xl"></i>`;
+
+            try {
+                const genAI = new GoogleGenAI(key);
+                // Note: Direct Image generation is handled via Modalitiies in 2026 update
+                const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const res = await aiModel.generateContent({
+                    contents: [{ role: 'user', parts: [{ text: "GENERATE IMAGE: " + prompt }] }],
+                    generationConfig: { modalities: ["image"] }
+                });
+                
+                const imgUrl = res.response.candidates[0].content.parts[0].inlineData.data;
+                const src = `data:image/png;base64,${imgUrl}`;
+                output.innerHTML = `<img src="${src}" class="w-full h-full object-cover">`;
+                addToHistory(src, prompt);
+            } catch (e) { output.innerHTML = "Image generation failed for this key."; }
+        };
+
+        function appendMsg(t, s) {
+            const d = document.createElement('div');
+            d.className = `flex ${s==='user'?'justify-end':'justify-start'} w-full`;
+            d.innerHTML = `<div class="${s==='user'?'bg-indigo-600':'bg-slate-800'} p-4 rounded-2xl max-w-[80%]">${marked.parse(t)}</div>`;
+            document.getElementById('chatBox').appendChild(d);
+            document.getElementById('chatBox').scrollTop = 100000;
+            return d;
         }
 
-        function appendMsg(text, role) {
-            const div = document.createElement('div');
-            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-            div.innerHTML = `<div class="${role === 'user' ? 'bg-indigo-600' : 'bg-slate-800'} p-4 rounded-2xl max-w-[85%] text-sm shadow-md">${marked.parse(text)}</div>`;
-            document.getElementById('chatBox').appendChild(div);
-            document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
-            return div;
+        function addToHistory(s, p) {
+            const h = document.getElementById('imageHistory');
+            const d = document.createElement('img');
+            d.src = s; d.className = "w-full rounded-lg mb-2 opacity-70 hover:opacity-100 cursor-pointer transition";
+            d.onclick = () => { showView('studio'); document.getElementById('output').innerHTML = `<img src="${s}" class="w-full h-full object-cover">`; };
+            h.prepend(d);
         }
-
-        window.clearChat = () => document.getElementById('chatBox').innerHTML = '';
     </script>
 </body>
 </html>
